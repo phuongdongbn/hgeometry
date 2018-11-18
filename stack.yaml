@@ -7,6 +7,7 @@ packages:
 extra-deps:
 - approximate-equality-1.1.0.2
 - type-level-natural-number-2.0
+- multiset-0.3.4.1
 build:
   # library-profiling: true
   # executable-profiling: true

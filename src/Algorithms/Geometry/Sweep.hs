@@ -10,7 +10,22 @@
 -- Helper types and functions for implementing Sweep line algorithms.
 --
 --------------------------------------------------------------------------------
-module Algorithms.Geometry.Sweep where
+module Algorithms.Geometry.Sweep( Timed
+                                , runAt
+
+                                , runAtT
+                                , runAtI
+
+                                , currentTime
+                                , constT
+                                , pure'
+
+                                , pure2, coerceTime
+
+                                , Reifies
+                                )
+
+where
 
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -44,15 +59,21 @@ instance (Reifies s t, Show t, Show a) => Show (Timed s t a) where
                    in mconcat ["Timed @", show t, " ", show $ f t]
 
 
+-- | Run a timed computation at a given time
 runAtT             :: t -> Timed s t a -> a
 runAtT t (Timed f) = f t
 
+-- | Run a timed computation at an implicit time by using the reflection mechanism
+-- to invent a time t.
 runAtI :: forall s t a. Reifies s t => Timed s t a -> a
 runAtI = runAtIP (Proxy :: Proxy s)
 
+-- | Running a computation at a given time. This function is useful to ty
+-- together the proxy type used in reify with the 's' in the Timed s t a type.
 runAtIP               :: forall s t a. Reifies s t => Proxy s -> Timed s t a -> a
 runAtIP prx (Timed f) = f $ reflect prx
 
+-- | Runs a timed computation.
 runAt     :: t -> (forall s. Reifies s t => Timed s t a) -> a
 runAt t k = reify t $ \prx -> runAtIP prx k
 
@@ -79,8 +100,20 @@ currentTime = Timed id
 constT   :: forall proxy (s :: *) t a. proxy s -> a -> Timed s t a
 constT _ = Timed . const
 
+-- | Computes a nested Timed value
+pure' :: a -> Timed s t (Timed s t a)
+pure' = pure . pure
 
+--------------------------------------------------------------------------------
 
+-- | Coerces the Times associated with a map
+coerceTime :: f (Timed s0 t k) v -> f (Timed s t k) v
+coerceTime = unsafeCoerce
+
+-- | Helper function to construct a timed 'Map' (or similar two parameter
+-- container type), whose keys are timed values themselves.
+pure2 :: f (Timed s t k) v -> Timed s t (f (Timed s t k) v)
+pure2 = pure
 
 
 --------------------------------------------------------------------------------
@@ -98,11 +131,11 @@ line2 = L $ (\x -> 10 - fromIntegral x, "Line 2")
 
 --------------------------------------------------------------------------------
 
-pure2 :: f (Timed s t k) v -> Timed s t (f (Timed s t k) v)
-pure2 = pure
 
-pure' :: a -> Timed s t (Timed s t a)
-pure' = pure . pure
+
+
+
+
 
 
 myMap :: (Num t, Ord t, Reifies s0 t) => Map (Timed s0 t t) String
@@ -127,14 +160,12 @@ query     :: (Ord k, Reifies s t) => k -> Map (Timed s t k) v -> Timed s t (Mayb
 query y m = fmap snd <$> query' y m
 
 
-coerceT :: Map (Timed s0 t k) v -> Map (Timed s t k) v
-coerceT = unsafeCoerce
 
 
 query2       :: (Num t, Ord t, Reifies s0 t) => (t,t) -> Timed s0 t (Maybe String)
 query2 (x,y) = f <$> pure2 myMap
   where
-    f m = runAt x $ query y (coerceT m)
+    f m = runAt x $ query y (coerceTime m)
 
 
 queryL      :: (Reifies s t, Show t, Show k, Show v, Ord k)
@@ -143,10 +174,12 @@ queryL y m = (fmap show) <$> query' y m
 
 queryL'      :: (Reifies s t, Show t, Show k, Show v, Ord k)
             => k -> Map (Timed s0 t k) v -> Timed s t (Maybe String)
-queryL' y m = queryL y (coerceT m)
+queryL' y m = queryL y (coerceTime m)
 
 
-
+-- | myLines is a Map, whose keys are constructed a time s0. We now query in
+-- this Map to find the point right above (x,y) by setting the "current" time
+-- to x and running the query at that time.
 queryL2       :: (Integral t, Ord t, Show t, Reifies s0 t) => (t,Double) -> Timed s0 t (Maybe String)
 queryL2 (x,y) = f <$> pure2 myLines
   where

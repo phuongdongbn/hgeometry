@@ -1,3 +1,13 @@
+--------------------------------------------------------------------------------
+-- |
+-- Module      :  Data.OrdSeq
+-- Copyright   :  (C) Frank Staals
+-- License     :  see the LICENSE file
+-- Maintainer  :  Frank Staals
+--
+-- Implementation of an Ordered Sequence
+--
+--------------------------------------------------------------------------------
 module Data.OrdSeq where
 
 
