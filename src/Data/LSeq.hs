@@ -52,9 +52,10 @@ import           Control.Lens.At (Ixed(..), Index, IxValue)
 import qualified Data.Foldable as F
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Maybe (fromJust)
+import           Data.Semigroup.Foldable
 import qualified Data.Sequence as S
-import           GHC.Generics (Generic)
 import qualified Data.Traversable as Tr
+import           GHC.Generics (Generic)
 import           GHC.TypeLits
 import           Prelude hiding (drop,take,head,last)
 
@@ -82,7 +83,7 @@ instance Monoid (LSeq 0 a) where
   mempty = empty
   mappend = (<>)
 
-
+instance (1 <= n) => Foldable1 (LSeq n)
 
 type instance Index   (LSeq n a) = Int
 type instance IxValue (LSeq n a) = a
@@ -137,11 +138,6 @@ forceLSeq n = promise . go (fromInteger $ natVal n)
       where
         l   = S.length . S.take n' . toSeq $ s
         msg = "forceLSeq: too few elements. expected " <> show n' <> " but found " <> show l
-
-
-
-toNonEmpty :: LSeq (1 + n) a -> NonEmpty.NonEmpty a
-toNonEmpty = NonEmpty.fromList . F.toList
 
 -- | appends two sequences.
 --
