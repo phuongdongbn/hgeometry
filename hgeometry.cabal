@@ -72,6 +72,11 @@ flag with-quickcheck
   default:     True
   manual:      False
 
+flag with-svg
+  description: Include the ability to output to Svg
+  default:     True
+  manual:      False
+
 flag interactive
   description: Build  interactive parts
   default:     False
@@ -249,7 +254,6 @@ library
               , colour           >= 2.3.3
               , reflection       >= 2.1
 
-
               -- , validation       >= 0.4
 
               , parsec           >= 3
@@ -267,6 +271,14 @@ library
               , mtl
               , random
               , template-haskell
+
+                -- TODO: Remove thesee
+              , blaze-svg        >= 0.3.6
+              , blaze-markup     >= 0.8
+
+  if flag(svg)
+    build-depends: blaze-svg        >= 0.3.6
+                 , blaze-markup     >= 0.8
 
   if flag(with-quickcheck)
     build-depends: QuickCheck              >= 2.5
