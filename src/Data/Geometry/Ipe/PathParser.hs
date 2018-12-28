@@ -5,6 +5,7 @@ module Data.Geometry.Ipe.PathParser where
 import           Data.Bifunctor
 import           Data.Char (isSpace)
 import           Data.Ext (ext)
+import           Data.Fixed
 import           Data.Geometry.Box
 import           Data.Geometry.Ipe.ParserPrimitives
 import           Data.Geometry.Ipe.Types (Operation(..))
@@ -39,6 +40,7 @@ defaultFromSeq x (Just (l,y)) = let x'          = fromInteger x
 
 instance Coordinate Double
 instance Coordinate (Ratio Integer)
+instance HasResolution p => Coordinate (Fixed p)
 
 -----------------------------------------------------------------------
 -- | Running the parsers

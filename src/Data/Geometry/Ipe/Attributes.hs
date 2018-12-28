@@ -214,7 +214,7 @@ data TransformationTypes = Affine | Rigid | Translations deriving (Show,Read,Eq)
 -- these Attributes are speicifc to IpeObjects representing TextLabels and
 -- MiniPages. The same structure as for the `CommonAttributes' applies here.
 
--- | TODO
+-- TODO
 
 --------------------------------------------------------------------------------
 -- | Symbol Attributes

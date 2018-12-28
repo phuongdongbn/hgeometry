@@ -1,6 +1,7 @@
 flags:
     hgeometry:
         examples: true
+        with-svg: true
         interactive: false
 packages:
 - '.'

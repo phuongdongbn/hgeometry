@@ -1,27 +1,31 @@
-{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 module Data.Geometry.Svg.Writer where
 
 import           Control.Lens hiding (rmap, Const(..))
 import qualified Data.ByteString.Lazy as B
 import           Data.Ext
+import           Data.Fixed
 import qualified Data.Foldable as F
 import qualified Data.Geometry.Ipe.Attributes as IA
+import           Data.Geometry.Ipe.Color (IpeColor(..))
 import           Data.Geometry.Ipe.Types
-import           Data.Geometry.Ipe.Color(IpeColor(..))
-import           Data.Geometry.Ipe.Value(IpeValue(..))
 import qualified Data.Geometry.Ipe.Types as Ipe
-import           Data.Geometry.Ipe.Writer (IpeWriteText(..))
+import           Data.Geometry.Ipe.Value (IpeValue(..))
 import           Data.Geometry.Point
 import           Data.Geometry.PolyLine
 import           Data.Geometry.Polygon
+import           Data.Geometry.Transformation (Matrix)
 import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Maybe
 import           Data.Monoid (mconcat)
 import           Data.Proxy
+import           Data.Ratio
 import           Data.Semigroup.Foldable (toNonEmpty)
-import           Data.Text (Text)
+import           Data.Singletons (Apply)
 import           Data.Vinyl hiding (Label)
 import           Data.Vinyl.Functor
 import           Data.Vinyl.TypeLevel
@@ -32,29 +36,35 @@ import           Text.Blaze.Svg11 ((!))
 import qualified Text.Blaze.Svg11 as Svg
 import qualified Text.Blaze.Svg11.Attributes as A
 
-
 --------------------------------------------------------------------------------
-
-
-
 
 svgO :: ToMarkup a => a -> Svg.Svg
 svgO = Svg.toSvg
 
 
+
+
 toSvgXML :: ToMarkup t => t -> B.ByteString
-toSvgXML = SvgRender.renderSvg . Svg.toSvg
+toSvgXML = SvgRender.renderSvg
+         . (Svg.docTypeSvg ! A.width "800"
+                           ! A.height "600"
+                           ! A.transform "scale(1,-1)" -- make sure (0,0) is bottom left
+           )
+         . Svg.toSvg
+
+toSvgXML' :: ToMarkup t => t -> B.ByteString
+toSvgXML' = SvgRender.renderSvg . Svg.toSvg
 
 -- instance Coordinate r => ToValue r where
 
-instance Show r => ToMarkup (IpeObject r) where
+
+instance Real r => ToMarkup (IpeObject r) where
   toMarkup (IpeGroup g)     = toMarkup g
-  -- toMarkup (IpeImage i)     = toMarkup i
+  toMarkup (IpeImage i)     = toMarkup i
   toMarkup (IpeTextLabel t) = toMarkup t
-  -- toMarkup (IpeMiniPage m)  = toMarkup m
+  toMarkup (IpeMiniPage m)  = toMarkup m
   toMarkup (IpeUse u)       = toMarkup u
   toMarkup (IpePath p)      = toMarkup p
-
 
 instance ( ToMarkup g
          , IA.AllSatisfy IpeToSvgAttr rs
@@ -62,49 +72,69 @@ instance ( ToMarkup g
          ) => ToMarkup (g :+ IA.Attributes f rs) where
   toMarkup (i :+ ats) = toMarkup i `applyAts` svgWriteAttrs ats
 
-instance Show r => ToMarkup (TextLabel r) where
-  toMarkup (Label t p) = Svg.text t ! A.x (toAValue $ p^.xCoord)
-                                    ! A.y (toAValue $ p^.yCoord)
+instance Real r => ToMarkup (TextLabel r) where
+  toMarkup (Label t p) = Svg.text t ! A.x (toPValue $ p^.xCoord)
+                                    ! A.y (toPValue $ p^.yCoord)
 
--- instance IpeWriteText t => ToValue t where
---   toValue = undefined
+instance Real r => ToMarkup (MiniPage r) where
+  toMarkup (MiniPage t p w) = Svg.text t ! A.x     (toPValue $ p^.xCoord)
+                                         ! A.y     (toPValue $ p^.yCoord)
+                                         ! A.width (toPValue w)
+
+instance Real r => ToMarkup (Image r) where
+  toMarkup _ = error "ToMarkup: Image not implemented yet"
+  -- toMarkup (Image i r) = Svg.image t ! A.xlinkHref (toAValue i)
+  --                                        ! A.y     (toPValue $ p^.yCoord)
+  --                                        ! A.width (toPValue w)
 
 
--- toValueDef   :: IpeWriteText t => t -> Value
--- toValueDef x = case ipeWriteText x of
---                   Nothing -> mempty
---                   Just t  -> toValue t
 
+instance HasResolution p => ToValue (Fixed p) where
+  toValue = toAValue
 
+instance Integral a => ToValue (Ratio a) where
+  toValue = toValue @Pico . realToFrac
 
-instance Show r => ToValue (PathSegment r) where
+instance Real r => ToValue (PathSegment r) where
   toValue = \case
     PolyLineSegment pl -> Svg.mkPath . toPath $ pl^.points.to toNonEmpty
     PolygonPath  pg    -> Svg.mkPath $ do toPath $ pg^.outerBoundary.to toNonEmpty
                                           Svg.z
-    EllipseSegment m   -> undefined
-    _                  -> error "toValeue: not implemented yet"
+    EllipseSegment _   -> undefined
+    _                  -> error "toValue: not implemented yet"
 
-toPath     :: Show r => NonEmpty (Point 2 r :+ p) -> Svg.Path
+toPath     :: Real r => NonEmpty (Point 2 r :+ p) -> Svg.Path
 toPath pts = case (^.core) <$> pts of
-               (v:|vs) -> do Svg.l (v^.xCoord) (v^.yCoord)
-                             mapM_ (\(Point2 x y) -> Svg.m x y) vs
+    (v:|vs) -> do Svg.m (showP $ v^.xCoord) (showP $ v^.yCoord)
+                  mapM_ (\(Point2 x y) -> Svg.l (showP x) (showP y)) vs
 
-instance Show r => ToMarkup (Ipe.Path r) where
-  toMarkup (Path s) = let pa = mconcat . map toValue . F.toList $ s
-                      in Svg.path ! A.d pa
 
-instance Show r => ToMarkup (Ipe.IpeSymbol r) where
-  toMarkup (Symbol p _) = Svg.circle ! A.cx (toAValue $ p^.xCoord)
-                                     ! A.cy (toAValue $ p^.yCoord)
-                                     ! A.r  (toAValue 5)
+instance Real r => ToMarkup (Ipe.Path r) where
+  toMarkup p | isPoly    = pSvg ! A.fill "transparent"
+             | otherwise = pSvg
+    where
+      pSvg = Svg.path ! A.d (toValue p)
+      isPoly = not . any (isn't _PolyLineSegment) $ p^.pathSegments
+
+
+instance Real r => ToValue (Path r) where
+  toValue (Path s) = mconcat . map toValue . F.toList $ s
+
+instance Real r => ToMarkup (Ipe.IpeSymbol r) where
+  toMarkup (Symbol p _) = Svg.circle ! A.cx (toPValue $ p^.xCoord)
+                                     ! A.cy (toPValue $ p^.yCoord)
+                                     ! A.r  (toPValue 5)
     -- TODO: for now just draw a disk of fixed radius
 
-instance Show r => ToMarkup (Ipe.Group r) where
+instance Real r => ToMarkup (Ipe.Group r) where
   toMarkup (Group os) = Svg.g (mapM_ toMarkup os)
 
 --------------------------------------------------------------------------------
 -- * Dealing with attributes
+
+instance ToValue (Apply f at) => ToValue (IA.Attr f at) where
+  toValue att = maybe mempty toValue $ IA._getAttr att
+
 
 applyAts    :: Svg.Markup -> [(SvgF, Svg.AttributeValue)] -> Svg.Markup
 applyAts x0 = F.foldl' (\x (f,v) -> x ! f v) x0
@@ -131,12 +161,19 @@ writeAttrFunctions (x :& xs) = Const (write'' x) :& writeAttrFunctions xs
 
 
 -- | Writing the attribute values
-writeAttrValues :: RecAll f rs ToValue => Rec f rs -> Rec (Const (Maybe Svg.AttributeValue)) rs
-writeAttrValues = rmap (\(Compose (Dict x)) -> Const . Just $ toValue x)
+writeAttrValues :: RecAll (IA.Attr f) rs ToValue
+                => Rec (IA.Attr f) rs -> Rec (Const (Maybe Svg.AttributeValue)) rs
+writeAttrValues = rmap (\(Compose (Dict x)) -> Const $ toMaybeValue x)
                 . reifyConstraint (Proxy :: Proxy ToValue)
 
+toMaybeValue   :: ToValue (IA.Attr f at) => IA.Attr f at -> Maybe Svg.AttributeValue
+toMaybeValue a = case a of
+                   IA.NoAttr -> Nothing
+                   IA.Attr _ -> Just $ toValue a
 
 type SvgF = Svg.AttributeValue -> Svg.Attribute
+
+
 
 -- | For the types representing attribute values we can get the name/key to use
 -- when serializing to ipe.
@@ -170,15 +207,53 @@ instance IpeToSvgAttr IA.Gradient   where attrSvg _ = Nothing
 instance IpeToSvgAttr IA.Clip     where attrSvg _ = Just A.clip
 
 
+
 --------------------------------------------------------------------------------
 
-instance Show r => ToValue (IpeColor r) where
-  toValue (IpeColor v) = case v of
-                           Named t  -> toAValue t
-                           Valued v -> toAValue v
+deriving instance ToValue LayerName
+
+instance Real r => ToValue (IpeColor r) where
+  toValue (IpeColor c) = case c of
+                           Named t  -> toValue t
+                           Valued v -> toAValue $ fmap showP v
+
+-- TODO:
+
+
+
+instance Real r => ToValue (IA.IpePen r) where
+  toValue _ = mempty
+
+instance Real r => ToValue (IA.IpeSize r) where
+  toValue _ = mempty
+
+instance Real r => ToValue (IA.IpeArrow r) where
+  toValue _ = mempty
+
+instance Real r => ToValue (IA.IpeDash r) where
+  toValue _ = mempty
+
+instance Real r => ToValue (Matrix 3 3 r) where
+  toValue _ = mempty
+
+instance ToValue IA.FillType where
+  toValue _ = mempty
+
+instance ToValue IA.PinType where
+  toValue _ = mempty
+
+instance ToValue IA.TransformationTypes where
+  toValue _ = mempty
 
 
 --------------------------------------------------------------------------------
 
 toAValue :: Show a => a -> Svg.AttributeValue
 toAValue = toValue . show
+
+toPValue :: Real r => r -> Svg.AttributeValue
+toPValue = toValue . showP
+
+-- | show by converting to a Pico
+showP :: Real a => a -> Pico
+showP = realToFrac

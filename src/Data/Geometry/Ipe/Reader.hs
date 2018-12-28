@@ -26,7 +26,8 @@ module Data.Geometry.Ipe.Reader( -- * Reading ipe Files
                                , Coordinate(..)
                                ) where
 
-import           Control.Applicative((<|>))
+
+import           Control.Applicative ((<|>))
 import           Control.Lens hiding (Const, rmap)
 import qualified Data.ByteString as B
 import           Data.Colour.SRGB (RGB(..))
@@ -34,20 +35,20 @@ import           Data.Either (rights)
 import           Data.Ext
 import           Data.Geometry.Box
 import           Data.Geometry.Ipe.Attributes
+import           Data.Geometry.Ipe.Color (IpeColor(..))
 import           Data.Geometry.Ipe.ParserPrimitives (pInteger, pWhiteSpace)
 import           Data.Geometry.Ipe.PathParser
 import           Data.Geometry.Ipe.Types
 import           Data.Geometry.Ipe.Value
-import           Data.Geometry.Ipe.Color(IpeColor(..))
 import           Data.Geometry.Point
 import           Data.Geometry.PolyLine
 import qualified Data.Geometry.Polygon as Polygon
 import qualified Data.Geometry.Transformation as Trans
+import qualified Data.LSeq as LSeq
 import qualified Data.List as L
 import qualified Data.List.NonEmpty as NE
 import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Proxy
-import qualified Data.LSeq as LSeq
 import           Data.Singletons
 import           Data.Text (Text)
 import qualified Data.Text as T

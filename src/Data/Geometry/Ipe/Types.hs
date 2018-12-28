@@ -17,32 +17,26 @@ module Data.Geometry.Ipe.Types where
 
 
 import           Control.Lens
-import           Data.Proxy
-import           Data.Vinyl hiding (Label)
-
 import           Data.Ext
-import           Data.Geometry.Box(Rectangle)
-import           Data.Geometry.Point
-import           Data.Geometry.PolyLine
-import           Data.Geometry.Polygon(SimplePolygon)
-import           Data.Geometry.Properties
-import           Data.Geometry.Transformation
-
-import           Data.Maybe(mapMaybe)
-import           Data.Singletons.TH(genDefunSymbols)
-
-import           Data.Geometry.Ipe.Literal
-import           Data.Geometry.Ipe.Color
+import           Data.Geometry.Box (Rectangle)
 import qualified Data.Geometry.Ipe.Attributes as AT
 import           Data.Geometry.Ipe.Attributes hiding (Matrix)
-import           Data.Text(Text)
-import           Text.XML.Expat.Tree(Node)
-
-import           GHC.Exts
-
-
+import           Data.Geometry.Ipe.Color
+import           Data.Geometry.Ipe.Literal
+import           Data.Geometry.Point
+import           Data.Geometry.PolyLine
+import           Data.Geometry.Polygon (SimplePolygon)
+import           Data.Geometry.Properties
+import           Data.Geometry.Transformation
+import qualified Data.LSeq as LSeq
 import qualified Data.List.NonEmpty as NE
-import qualified Data.LSeq          as LSeq
+import           Data.Maybe (mapMaybe)
+import           Data.Proxy
+import           Data.Singletons.TH (genDefunSymbols)
+import           Data.Text (Text)
+import           Data.Vinyl hiding (Label)
+import           GHC.Exts
+import           Text.XML.Expat.Tree (Node)
 
 --------------------------------------------------------------------------------
 

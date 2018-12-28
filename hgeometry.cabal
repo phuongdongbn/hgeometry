@@ -226,6 +226,12 @@ library
                     Data.Yaml.Util
 
 
+  if flag(with-svg)
+    exposed-modules:
+                    Data.Geometry.Svg
+                    Data.Geometry.Svg.Writer
+
+
 
   other-modules:
                    Data.Geometry.Ipe.ParserPrimitives
@@ -276,7 +282,7 @@ library
               , blaze-svg        >= 0.3.6
               , blaze-markup     >= 0.8
 
-  if flag(svg)
+  if flag(with-svg)
     build-depends: blaze-svg        >= 0.3.6
                  , blaze-markup     >= 0.8
 
@@ -422,6 +428,7 @@ executable hgeometry-examples
                  Demo.ExpectedPairwiseDistance
                  Demo.TriangulateWorld
                  Demo.GPXParser
+                 Demo.IpeToSvg
 
   default-language: Haskell2010
 
