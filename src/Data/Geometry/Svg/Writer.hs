@@ -3,10 +3,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UnicodeSyntax #-}
 module Data.Geometry.Svg.Writer where
 
 import           Control.Lens hiding (rmap, Const(..))
 import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString.Lazy.Char8 as B8
 import           Data.Ext
 import           Data.Fixed
 import qualified Data.Foldable as F
@@ -18,6 +20,7 @@ import           Data.Geometry.Ipe.Value (IpeValue(..))
 import           Data.Geometry.Point
 import           Data.Geometry.PolyLine
 import           Data.Geometry.Polygon
+import           Data.Geometry.Properties (NumType)
 import           Data.Geometry.Transformation (Matrix)
 import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Maybe
@@ -38,12 +41,11 @@ import qualified Text.Blaze.Svg11.Attributes as A
 
 --------------------------------------------------------------------------------
 
-svgO :: ToMarkup a => a -> Svg.Svg
-svgO = Svg.toSvg
-
-
-
-
+-- | Converts an element into a valid svg document (including doctype etc.)
+-- The size of the resulting svg is set to 800x600. Moreover, we flip the axes
+-- so that the origin is in the bottom-left.
+--
+--
 toSvgXML :: ToMarkup t => t -> B.ByteString
 toSvgXML = SvgRender.renderSvg
          . (Svg.docTypeSvg ! A.width "800"
@@ -52,19 +54,41 @@ toSvgXML = SvgRender.renderSvg
            )
          . Svg.toSvg
 
-toSvgXML' :: ToMarkup t => t -> B.ByteString
-toSvgXML' = SvgRender.renderSvg . Svg.toSvg
+-- | Convert an element to Svg using 'toSvgXML' and prints the resulting svg
+-- (as xml) output to stdout.
+--
+printSvgXML :: ToMarkup t => t -> IO ()
+printSvgXML = B8.putStrLn . toSvgXMLElem
 
--- instance Coordinate r => ToValue r where
 
+-- | Convert an element to Svg
+svgO :: ToMarkup a => a -> Svg.Svg
+svgO = Svg.toSvg
+
+
+-- | Convert an element to Svg, and render this svg as xml. Note that the xml
+-- contains *only* this element.
+toSvgXMLElem :: ToMarkup t => t -> B.ByteString
+toSvgXMLElem = SvgRender.renderSvg . Svg.toSvg
+
+-- | Convert an element to Svg, and prints the xml output to stdout.
+printSvgXMLElem :: ToMarkup t => t -> IO ()
+printSvgXMLElem = B8.putStrLn . toSvgXMLElem
+
+
+--------------------------------------------------------------------------------
 
 instance Real r => ToMarkup (IpeObject r) where
-  toMarkup (IpeGroup g)     = toMarkup g
-  toMarkup (IpeImage i)     = toMarkup i
-  toMarkup (IpeTextLabel t) = toMarkup t
-  toMarkup (IpeMiniPage m)  = toMarkup m
-  toMarkup (IpeUse u)       = toMarkup u
-  toMarkup (IpePath p)      = toMarkup p
+  toMarkup (IpeGroup g)         = toMarkup g
+  toMarkup (IpeImage i)         = toMarkup i
+  toMarkup (IpeTextLabel t)     = toMarkup t
+  toMarkup (IpeMiniPage m)      = toMarkup m
+  toMarkup (IpeUse u)           = toMarkup u
+  toMarkup (IpePath (p :+ ats)) = toMarkup $ p :+ (ats' <> ats)
+    where
+      ats' = IA.attr IA.SFill $ IpeColor $ Named "transparent"
+      -- svg assumes that by default the filling is set to transparent
+      -- so make sure we do that as well
 
 instance ( ToMarkup g
          , IA.AllSatisfy IpeToSvgAttr rs
@@ -110,12 +134,7 @@ toPath pts = case (^.core) <$> pts of
 
 
 instance Real r => ToMarkup (Ipe.Path r) where
-  toMarkup p | isPoly    = pSvg ! A.fill "transparent"
-             | otherwise = pSvg
-    where
-      pSvg = Svg.path ! A.d (toValue p)
-      isPoly = not . any (isn't _PolyLineSegment) $ p^.pathSegments
-
+  toMarkup p = Svg.path ! A.d (toValue p)
 
 instance Real r => ToValue (Path r) where
   toValue (Path s) = mconcat . map toValue . F.toList $ s
