@@ -3,7 +3,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE UnicodeSyntax #-}
 module Data.Geometry.Svg.Writer where
 
 import           Control.Lens hiding (rmap, Const(..))
@@ -20,7 +19,6 @@ import           Data.Geometry.Ipe.Value (IpeValue(..))
 import           Data.Geometry.Point
 import           Data.Geometry.PolyLine
 import           Data.Geometry.Polygon
-import           Data.Geometry.Properties (NumType)
 import           Data.Geometry.Transformation (Matrix)
 import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Maybe

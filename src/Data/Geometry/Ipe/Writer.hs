@@ -12,7 +12,7 @@
 --------------------------------------------------------------------------------
 module Data.Geometry.Ipe.Writer where
 
-import           Control.Lens ((^.), (^..), (.~), (&))
+import           Control.Lens ((^.), (^..))
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as C
 import           Data.Colour.SRGB (RGB(..))
@@ -25,14 +25,11 @@ import qualified Data.Geometry.Ipe.Attributes as IA
 import           Data.Geometry.Ipe.Color (IpeColor(..))
 import           Data.Geometry.Ipe.Types
 import           Data.Geometry.Ipe.Value
-import           Data.Geometry.LineSegment
 import           Data.Geometry.Point
 import           Data.Geometry.PolyLine
 import           Data.Geometry.Polygon (Polygon, outerBoundary, holeList, asSimplePolygon)
 import qualified Data.Geometry.Transformation as GT
 import           Data.Geometry.Vector
-import qualified Data.LSeq as LSeq
-import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Maybe (catMaybes, mapMaybe, fromMaybe)
 import           Data.Proxy
 import           Data.Ratio
@@ -233,11 +230,6 @@ instance IpeWriteText r => IpeWrite (IpeSymbol r) where
                            , ("name", n)
                            ] []
 
--- instance IpeWriteText (SymbolAttrElf rs r) => IpeWriteText (SymbolAttribute r rs) where
---   ipeWriteText (SymbolAttribute x) = ipeWriteText x
-
-
-
 --------------------------------------------------------------------------------
 
 instance IpeWriteText r => IpeWriteText (GT.Matrix 3 3 r) where
@@ -349,11 +341,6 @@ ipeWriteRec = catMaybes . recordToList
             . rmap (\(Compose (Dict x)) -> Const $ ipeWrite x)
             . reifyConstraint (Proxy :: Proxy IpeWrite)
 
-
--- instance IpeWriteText (GroupAttrElf rs r) => IpeWriteText (GroupAttribute r rs) where
---   ipeWriteText (GroupAttribute x) = ipeWriteText x
-
-
 --------------------------------------------------------------------------------
 
 deriving instance IpeWriteText LayerName
@@ -399,22 +386,6 @@ instance (IpeWriteText r) => IpeWrite (IpeFile r) where
 
 --------------------------------------------------------------------------------
 
-instance (IpeWriteText r, IpeWrite p) => IpeWrite (PolyLine 2 p r) where
-  ipeWrite p = ipeWrite path
-    where
-      path = fromPolyLine $ p & points.traverse.extra .~ ()
-      -- TODO: Do something with the p's
-
-fromPolyLine :: PolyLine 2 () r -> Path r
-fromPolyLine = Path . LSeq.fromNonEmpty . (:| []) . PolyLineSegment
-
-
-instance (IpeWriteText r) => IpeWrite (LineSegment 2 p r) where
-  ipeWrite (LineSegment' p q) = ipeWrite . fromPolyLine . fromPoints . map (extra .~ ()) $ [p,q]
-
-
-instance IpeWrite () where
-  ipeWrite = const Nothing
 
 -- -- | slightly clever instance that produces a group if there is more than one
 -- -- element and just an element if there is only one value produced
@@ -427,30 +398,10 @@ combine []  = Nothing
 combine [n] = Just n
 combine ns  = Just $ Element "group" [] ns
 
--- instance (IpeWrite a, IpeWrite b) => IpeWrite (a,b) where
---   ipeWrite (a,b) = combine . catMaybes $ [ipeWrite a, ipeWrite b]
-
-
-
--- -- | The default symbol for a point
--- ipeWritePoint :: IpeWriteText r => Point 2 r -> Maybe (Node Text Text)
--- ipeWritePoint = ipeWrite . flip Symbol "mark/disk(sx)"
-
-
--- instance (IpeWriteText r, Floating r) => IpeWrite (Circle r) where
---   ipeWrite = ipeWrite . Path . S2.l1Singleton . fromCircle
-
-
-
---------------------------------------------------------------------------------
-
-
+-------------------------------------------------------------------------------
 
 -- testPoly :: PolyLine 2 () Double
 -- testPoly = fromPoints' [origin, point2 0 10, point2 10 10, point2 100 100]
-
-
-
 
 -- testWriteUse :: Maybe (Node Text Text)
 -- testWriteUse = ipeWriteExt sym
