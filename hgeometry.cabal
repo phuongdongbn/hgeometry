@@ -34,8 +34,10 @@ data-files:          resources/basic.isy
                      test/Data/Geometry/Polygon/Convex/convexTests.ipe
                      test/Data/Geometry/arrangement.ipe
                      test/Data/Geometry/arrangement.ipe.out.ipe
-                     test/Data/myGraph.yaml
-                     test/Data/myPlaneGraph.yaml
+                     test/Data/PlanarGraph/myGraph.yaml
+                     test/Data/PlaneGraph/myPlaneGraph.yaml
+                     test/Data/PlaneGraph/small.yaml
+                     test/Data/PlaneGraph/testsegs.png
 
                      examples/BAPC2014/sample.in
                      examples/BAPC2014/sample.out
@@ -54,6 +56,7 @@ extra-source-files:  README.md
                      changelog.md
 
 Extra-doc-files:     docs/Data/PlanarGraph/testG.png
+                     docs/Data/PlaneGraph/planegraph.png
                      -- docs/**/*.png
 
 cabal-version:       2.0
@@ -214,8 +217,18 @@ library
                     -- * Planar Graphs
                     Data.Permutation
                     Data.PlanarGraph
+                    Data.PlanarGraph.AdjRep
+                    Data.PlanarGraph.IO
+                    Data.PlanarGraph.Dart
+                    Data.PlanarGraph.Core
+                    Data.PlanarGraph.Dual
+                    Data.PlanarGraph.EdgeOracle
+
                     Data.PlaneGraph
+                    Data.PlaneGraph.Core
                     Data.PlaneGraph.Draw
+                    Data.PlaneGraph.AdjRep
+                    Data.PlaneGraph.IO
 
                     -- * Graphics stuff
                     Graphics.Camera
@@ -254,7 +267,7 @@ library
               , semigroups       >= 0.18
               , singletons       >= 2.0
               , text             >= 1.1.1.0
-              , vinyl            >= 0.6        && < 0.9
+              , vinyl            >= 0.10
               , deepseq          >= 1.1
               , fingertree       >= 0.1
               , colour           >= 2.3.3
@@ -305,6 +318,8 @@ library
                     , ConstraintKinds
                     , PolyKinds
                     , RankNTypes
+                    , TypeApplications
+                    , ScopedTypeVariables
 
                     , PatternSynonyms
                     , TupleSections
@@ -544,6 +559,9 @@ test-suite hspec
                     , ConstraintKinds
                     , PolyKinds
                     , RankNTypes
+                    , TypeApplications
+                    , ScopedTypeVariables
+
 
                     , PatternSynonyms
                     , ViewPatterns
@@ -640,6 +658,8 @@ benchmark benchmarks
                     , ConstraintKinds
                     , PolyKinds
                     , RankNTypes
+                    , TypeApplications
+                    , ScopedTypeVariables
 
                     , PatternSynonyms
                     , ViewPatterns

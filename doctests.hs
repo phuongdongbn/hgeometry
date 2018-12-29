@@ -1,5 +1,4 @@
 import Test.DocTest
-
 import Data.Monoid
 
 main = doctest $ ["-isrc" ] ++ ghcExts ++ files
@@ -13,6 +12,8 @@ ghcExts = map ("-X" ++)
           , "ConstraintKinds"
           , "PolyKinds"
           , "RankNTypes"
+          , "TypeApplications"
+          , "ScopedTypeVariables"
 
           , "PatternSynonyms"
           , "ViewPatterns"
@@ -51,6 +52,9 @@ modules =
   , "Data.CircularSeq"
   , "Data.LSeq"
   , "Data.PlanarGraph"
+  , "Data.PlanarGraph.Dart"
+  , "Data.PlanarGraph.Core"
+  , "Data.PlaneGraph.IO"
   , "Data.Tree.Util"
 
   , "Data.Geometry.Point"
