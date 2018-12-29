@@ -1,8 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 module Data.Geometry.Svg.Writer where
 
 import           Control.Lens hiding (rmap, Const(..))
@@ -89,7 +87,9 @@ instance Real r => ToMarkup (IpeObject r) where
       -- so make sure we do that as well
 
 instance ( ToMarkup g
-         , IA.AllSatisfy IpeToSvgAttr rs
+         ,AllConstrained IpeToSvgAttr rs
+         , ReifyConstraint ToValue (IA.Attr f) rs
+         , RMap rs, RecordToList rs
          , RecAll (IA.Attr f) rs ToValue
          ) => ToMarkup (g :+ IA.Attributes f rs) where
   toMarkup (i :+ ats) = toMarkup i `applyAts` svgWriteAttrs ats
@@ -157,7 +157,9 @@ applyAts    :: Svg.Markup -> [(SvgF, Svg.AttributeValue)] -> Svg.Markup
 applyAts x0 = F.foldl' (\x (f,v) -> x ! f v) x0
 
 -- | Functon to write all attributes in a Rec
-svgWriteAttrs              :: ( IA.AllSatisfy IpeToSvgAttr rs
+svgWriteAttrs              :: ( AllConstrained IpeToSvgAttr rs
+                              , RMap rs, RecordToList rs
+                              , ReifyConstraint ToValue (IA.Attr f) rs
                               , RecAll (IA.Attr f) rs ToValue
                               )
                            => IA.Attributes f rs
@@ -168,7 +170,8 @@ svgWriteAttrs (IA.Attrs r) = catMaybes . recordToList $ IA.zipRecsWith f (writeA
     f (Const mn) (Const mv) = Const $ (,) <$> mn <*> mv
 
 -- | Writing Attribute names
-writeAttrFunctions           :: IA.AllSatisfy IpeToSvgAttr rs => Rec f rs
+writeAttrFunctions           :: AllConstrained IpeToSvgAttr rs
+                             => Rec f rs
                              -> Rec (Const (Maybe SvgF)) rs
 writeAttrFunctions RNil      = RNil
 writeAttrFunctions (x :& xs) = Const (write'' x) :& writeAttrFunctions xs
@@ -178,10 +181,11 @@ writeAttrFunctions (x :& xs) = Const (write'' x) :& writeAttrFunctions xs
 
 
 -- | Writing the attribute values
-writeAttrValues :: RecAll (IA.Attr f) rs ToValue
+writeAttrValues :: ( ReifyConstraint ToValue (IA.Attr f) rs, RMap rs
+                   , RecAll (IA.Attr f) rs ToValue)
                 => Rec (IA.Attr f) rs -> Rec (Const (Maybe Svg.AttributeValue)) rs
 writeAttrValues = rmap (\(Compose (Dict x)) -> Const $ toMaybeValue x)
-                . reifyConstraint (Proxy :: Proxy ToValue)
+                . reifyConstraint @ToValue
 
 toMaybeValue   :: ToValue (IA.Attr f at) => IA.Attr f at -> Maybe Svg.AttributeValue
 toMaybeValue a = case a of
@@ -195,7 +199,7 @@ type SvgF = Svg.AttributeValue -> Svg.Attribute
 -- | For the types representing attribute values we can get the name/key to use
 -- when serializing to ipe.
 class IpeToSvgAttr (a :: IA.AttributeUniverse) where
-  attrSvg :: Proxy a -> Maybe SvgF
+  attrSvg :: proxy a -> Maybe SvgF
 
 -- CommonAttributeUnivers
 instance IpeToSvgAttr IA.Layer           where attrSvg _ = Nothing

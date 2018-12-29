@@ -116,7 +116,7 @@ instance (IpeWriteText l, IpeWriteText r) => IpeWriteText (Either l r) where
 -- | Functon to write all attributes in a Rec
 ipeWriteAttrs           :: ( RecordToList rs, RMap rs
                            , ReifyConstraint IpeWriteText (Attr f) rs
-                           , AllSatisfy IpeAttrName rs
+                           , AllConstrained IpeAttrName rs
                            , RecAll (Attr f) rs IpeWriteText
                            ) => IA.Attributes f rs -> [(Text,Text)]
 ipeWriteAttrs (Attrs r) = catMaybes . recordToList $ zipRecsWith f (writeAttrNames  r)
@@ -294,7 +294,7 @@ instance (IpeWriteText r) => IpeWrite (Group r) where
   ipeWrite (Group gs) = ipeWrite gs
 
 
-instance ( AllSatisfy IpeAttrName rs
+instance ( AllConstrained IpeAttrName rs
          , RecordToList rs, RMap rs
          , ReifyConstraint IpeWriteText (Attr f) rs
          , RecAll (Attr f) rs IpeWriteText

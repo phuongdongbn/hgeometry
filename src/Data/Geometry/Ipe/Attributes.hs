@@ -22,7 +22,6 @@ import Data.Text (Text)
 import Data.Vinyl
 import Data.Vinyl.TypeLevel
 import Data.Vinyl.Functor
-import GHC.Exts
 import Text.Read (lexP, step, parens, prec, (+++)
                 , Lexeme(Ident), readPrec, readListPrec, readListPrecDefault)
 
@@ -350,15 +349,8 @@ instance IpeAttrName Gradient   where attrName _ = "gradient"
 -- GroupAttributeUniverse
 instance IpeAttrName Clip     where attrName _ = "clip"
 
-
--- | Function that states that all elements in xs satisfy a given constraint c
-type family AllSatisfy (c :: k -> Constraint) (xs :: [k]) :: Constraint where
-  AllSatisfy c '[] = ()
-  AllSatisfy c (x ': xs) = (c x, AllSatisfy c xs)
-
-
 -- | Writing Attribute names
-writeAttrNames           :: AllSatisfy IpeAttrName rs => Rec f rs -> Rec (Const Text) rs
+writeAttrNames           :: AllConstrained IpeAttrName rs => Rec f rs -> Rec (Const Text) rs
 writeAttrNames RNil      = RNil
 writeAttrNames (x :& xs) = Const (write'' x) :& writeAttrNames xs
   where
