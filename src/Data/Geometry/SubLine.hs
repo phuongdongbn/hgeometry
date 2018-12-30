@@ -14,7 +14,6 @@ import           Data.Geometry.Vector
 import           Data.Ratio
 import qualified Data.Traversable as T
 import           Data.UnBounded
-import           Data.Util
 import           Data.Vinyl
 import           Data.Vinyl.CoRec
 
@@ -146,11 +145,7 @@ p `onSubLine2` sl = d `inInterval` r
 --   where
 --     f j = asA @(Interval () (UnBounded r)) $ j `intersect` i
 
--- | given point p, and a Subline l r such that p lies on line l, test if it
--- lies on the subline, i.e. in the interval r
--- onSubLine2UB                   :: (Ord r, Fractional r)
---
---
+
 onSubLine2UB                   :: (Ord r, Fractional r)
                                => Point 2 r -> SubLine 2 p (UnBounded r) r -> Bool
 p `onSubLine2UB` sl = lambda `inInterval` srsq
@@ -179,12 +174,6 @@ p `onSubLine2UB` sl = lambda `inInterval` srsq
     -- them. Moreover, to determine if p lies in the "positive" half-line
     -- starting from our anchor a we test if it lies in the left half-plane of
     -- the line perpendicular to a.
-
-testL :: SubLine 2 () (UnBounded Rational) Rational
-testL = SubLine (Line origin $ Vector2 10 5) (Interval (Closed $ ext (Val 1)) (Open $ ext MaxInfinity))
-
-testP = pointAt 5 (testL^.line)
-
 
 type instance IntersectionOf (SubLine 2 p s r) (SubLine 2 q s r) = [ NoIntersection
                                                                    , Point 2 r
@@ -241,6 +230,7 @@ getEndPointsUnBounded sl = second (fmap f) $ sl^.subRange
   where
     f = flip pointAt (sl^.line)
 
+-- | Creates a subline from a line
 fromLine   :: Arity d => Line d r -> SubLine d () (UnBounded r) r
 fromLine l = SubLine l (ClosedInterval (ext MinInfinity) (ext MaxInfinity))
 

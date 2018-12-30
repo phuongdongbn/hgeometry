@@ -1,16 +1,21 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Data.Geometry.Polygon.RegressionSpec where
 
-import Data.Ext
-import Data.Geometry
-import Data.Geometry.Polygon
-import Data.Geometry.SubLine
-import Data.UnBounded
-import Data.Geometry.Ipe
-import Data.Vinyl.CoRec
-import Data.Fixed
-import Test.Hspec
-import Test.QuickCheck.HGeometryInstances ()
+import           Control.Lens
+import           Data.Ext
+import           Data.Fixed
+import qualified Data.Foldable as F
+import           Data.Geometry
+import           Data.Geometry.Ipe
+import           Data.Geometry.Line
+import           Data.Geometry.Polygon
+import           Data.Geometry.SubLine
+import           Data.UnBounded
+import           Data.Vinyl.CoRec
+import           Test.Hspec
+import           Test.QuickCheck.HGeometryInstances ()
+
+import           Debug.Trace
 
 type Point2  = Point 2
 type Polygon' = SimplePolygon ()
@@ -73,3 +78,19 @@ transfD = scaleUniformlyBy scal . translateBy tran
 
 transfR :: (IsTransformable g, NumType g ~ Rational, Dimension g ~ 2) => g -> g
 transfR = scaleUniformlyBy scal . translateBy tran
+
+
+test = map (intersectionPoint) . F.toList . outerBoundaryEdges $ polygonD
+  where
+    l :: Line 2 Double
+    l = horizontalLine $ insidePoint^.yCoord
+    intersectionPoint s = let ubSL :: SubLine 2 () (UnBounded Double) Double
+                              ubSL = traceShowId $ s^._SubLine.re _unBounded.to dropExtra
+                          in (ubSL^.line) `intersect` ((fromLine l)^.line)
+
+
+-- test2 =
+-- (Col Point2 [-3.836436487362232e7,2273030.9266712796])
+-- (Col Point2 [-50897.81165740055,2273030.9266712796])
+-- (Col Point2 [2.883609328616765e7,2273030.9266712796])
+-- (Col Point2 [328603.74605845206,2273030.9266712796])
