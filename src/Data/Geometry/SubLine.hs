@@ -11,13 +11,12 @@ import           Data.Geometry.Line.Internal
 import           Data.Geometry.Point
 import           Data.Geometry.Properties
 import           Data.Geometry.Vector
+import           Data.Ratio
 import qualified Data.Traversable as T
 import           Data.UnBounded
+import           Data.Util
 import           Data.Vinyl
 import           Data.Vinyl.CoRec
-
-
-import           Data.Ratio
 
 --------------------------------------------------------------------------------
 
@@ -45,6 +44,21 @@ fixEndPoints sl = sl&subRange %~ f
   where
     ptAt              = flip pointAt (sl^.line)
     label (c :+ e)    = (c :+ (ptAt c :+ e))
+    f ~(Interval l u) = Interval (l&unEndPoint %~ label)
+                                 (u&unEndPoint %~ label)
+
+-- | Annotate the subRange with the actual ending points (if they exist)
+fixEndPointsUB    :: forall d p r. (Num r, Arity d)
+                  => SubLine d p                            (UnBounded r) r
+                  -> SubLine d (UnBounded (Point d r) :+ p) (UnBounded r) r
+fixEndPointsUB sl = sl&subRange %~ f
+  where
+    ptAt            :: r -> Point d r
+    ptAt            = flip pointAt (sl^.line)
+    label           :: UnBounded r :+ p -> UnBounded r :+ (UnBounded (Point d r) :+ p)
+    label (mc :+ e) = let mp = ptAt <$> mc in mc :+ (mp :+ e)
+    f                 :: Interval p                            (UnBounded r)
+                      -> Interval (UnBounded (Point d r) :+ p) (UnBounded r)
     f ~(Interval l u) = Interval (l&unEndPoint %~ label)
                                  (u&unEndPoint %~ label)
 
@@ -93,11 +107,83 @@ p `onSubLine2` sl = d `inInterval` r
     r = Interval (s&unEndPoint.core .~ 0) (e&unEndPoint.core .~ squaredEuclideanDist b a)
 
 
+
 -- | given point p, and a Subline l r such that p lies on line l, test if it
 -- lies on the subline, i.e. in the interval r
-onSubLine2UB        :: (Ord r, Fractional r)
-                    => Point 2 r -> SubLine 2 p (UnBounded r) r -> Bool
-p `onSubLine2UB` sl = p `onSubLineUB` sl
+-- onSubLine2UB                   :: (Ord r, Fractional r)
+--                                => Point 2 r -> SubLine 2 p (UnBounded r) r -> Bool
+-- p `onSubLine2UB` (SubLine m i) = case (i^.start.core, i^.end.core) of
+--     (MinInfinity,MinInfinity) -> False
+--     (MinInfinity,Val u)       -> onSubLine2UB1 p u (m&direction %~ ((-1)*^))
+--     (MinInfinity,MaxInfinity) -> True
+--     (Val _, MinInfinity)      -> False  -- this is an invalid interval to begin with
+--     (Val l, MaxInfinity)      -> onSubLine2UB1 p l m
+--     (Val l, Val u)            -> p `onSubLine2` (SubLine m $ mkI l u i)
+--     (MaxInfinity,_)           -> False
+--   where
+--     mkI l u (Interval s e) = Interval (s&unEndPoint.core .~ l) (e&unEndPoint.core .~ u)
+
+-- -- | given p and a subline l that is bounded on at least one side, with p on
+-- -- the supporting line of sl, test if p lies *on* sl.
+-- -- onSubLine2UB1        :: (Ord r, Fractional r)
+-- --                      => Point 2 r -> r -> Line 2 r -> Bool
+-- onSubLine2UB1       :: (Ord r, Fractional r) => Point 2 r -> r -> Line 2 r -> Bool
+-- onSubLine2UB1 p l m = undefined
+--   where
+--     d = (p .-. a) `dot` (b .-. a)
+
+-- onSubLine2UB                       :: (Ord r, Fractional r)
+--                                    => Point 2 r -> SubLine 2 p (UnBounded r) r -> Bool
+-- p `onSubLine2UB` (dropExtra -> sl) = any' (maybe False check) $ split 0 (sl^.subRange)
+--   where
+--     any' f (Two a b) = f a || f b
+--     check i = p `onSubLine2UB1` (sl&subRange .~ i)
+
+-- split     :: forall r. Ord r
+--           => r -> Interval () (UnBounded r) -> Two (Maybe (Interval () (UnBounded r)))
+-- split x i = Two (f $ Interval (Open   $ ext MinInfinity) (Closed $ ext (Val x)))
+--                 (f $ Interval (Closed $ ext (Val x))     (Open   $ ext MaxInfinity) )
+--   where
+--     f j = asA @(Interval () (UnBounded r)) $ j `intersect` i
+
+-- | given point p, and a Subline l r such that p lies on line l, test if it
+-- lies on the subline, i.e. in the interval r
+-- onSubLine2UB                   :: (Ord r, Fractional r)
+--
+--
+onSubLine2UB                   :: (Ord r, Fractional r)
+                               => Point 2 r -> SubLine 2 p (UnBounded r) r -> Bool
+p `onSubLine2UB` sl = lambda `inInterval` srsq
+  where
+    dist = squaredEuclideanDist (sl^.line.anchorPoint)
+
+    srsq = fmap (\alpha -> signum alpha * dist (pointAt alpha $ sl^.line)) <$> sl^.subRange
+    lambda = Val $ detSign * dist p
+
+    detSign = case ccw b a p of
+                CCW      -> 1
+                CW       -> (-1)
+                CoLinear -> (-1) -- if p is colinear with the line through a and b
+                                -- and it lies *on* the line sl^.line, then a=p
+                                -- so the distance must be zero anyway.
+
+    a = sl^.line.anchorPoint
+    -- the vector from a to the anchor point o is per
+    b = a .+^ sl^.line.to perpendicularTo.direction
+
+    -- the main idea is as follows; we square the values determining the
+    -- subrange as well as the distance from p to the anchorpoint; hence we get
+    -- the 'squared' lambda value corresponding to p. The original point lies
+    -- in the range iff the squared lambda value lies in squared values range.
+    -- We have to be a bit careful about the signs of the values when we square
+    -- them. Moreover, to determine if p lies in the "positive" half-line
+    -- starting from our anchor a we test if it lies in the left half-plane of
+    -- the line perpendicular to a.
+
+testL :: SubLine 2 () (UnBounded Rational) Rational
+testL = SubLine (Line origin $ Vector2 10 5) (Interval (Closed $ ext (Val 1)) (Open $ ext MaxInfinity))
+
+testP = pointAt 5 (testL^.line)
 
 
 type instance IntersectionOf (SubLine 2 p s r) (SubLine 2 q s r) = [ NoIntersection
