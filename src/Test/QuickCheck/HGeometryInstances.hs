@@ -18,12 +18,13 @@ import           Data.BinaryTree
 import           Data.Ext
 import           Data.Geometry hiding (vector)
 import           Data.Geometry.Box
+import           Data.Geometry.SubLine
+import qualified Data.LSeq as LSeq
+import           Data.OrdSeq (OrdSeq, fromListByOrd)
 import           Data.PlanarGraph
 import qualified Data.PlanarGraph as PlanarGraph
-import           Data.Geometry.SubLine
-import           Data.OrdSeq (OrdSeq, fromListByOrd)
 import           Data.Proxy
-import qualified Data.LSeq as LSeq
+import           Data.UnBounded
 import           GHC.TypeLits
 import           Test.QuickCheck
 
@@ -110,3 +111,15 @@ instance Arbitrary Direction where
 
 instance Arbitrary (Dart s) where
   arbitrary = Dart <$> arbitrary <*> arbitrary
+
+instance Arbitrary r => Arbitrary (UnBounded r) where
+  arbitrary = frequency [ (25,pure MinInfinity)
+                        , (50,Val <$> arbitrary)
+                        , (25,pure MaxInfinity)
+                        ]
+
+instance Arbitrary r => Arbitrary (Bottom r) where
+  arbitrary = bottomFromMaybe <$> arbitrary
+
+instance Arbitrary r => Arbitrary (Top r) where
+  arbitrary = topFromMaybe <$> arbitrary

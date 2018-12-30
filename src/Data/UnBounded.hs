@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell   #-}
-module Data.UnBounded( Top, topToMaybe
+module Data.UnBounded( Top, topToMaybe, topFromMaybe
                      , pattern ValT, pattern Top
 
-                     , Bottom, bottomToMaybe
+                     , Bottom, bottomToMaybe, bottomFromMaybe
                      , pattern Bottom, pattern ValB
 
                      , UnBounded(..)
@@ -47,6 +47,10 @@ instance Show a => Show (Top a) where
   show Top       = "Top"
   show ~(ValT x) = "ValT " ++ show x
 
+-- | Construct a Bottom value from a Maybe
+topFromMaybe :: Maybe a -> Top a
+topFromMaybe = GTop
+
 --------------------------------------------------------------------------------
 
 -- | `Bottom a` represents the type a, together with a 'Bottom' element,
@@ -68,6 +72,10 @@ pattern ValB x = GBottom (Just x)
 instance Show a => Show (Bottom a) where
   show Bottom    = "Bottom"
   show ~(ValB x) = "ValB " ++ show x
+
+-- | Construct a Bottom value from a Maybe
+bottomFromMaybe :: Maybe a -> Bottom a
+bottomFromMaybe = GBottom
 
 --------------------------------------------------------------------------------
 
