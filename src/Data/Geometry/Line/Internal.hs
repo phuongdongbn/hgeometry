@@ -70,11 +70,14 @@ verticalLine x = Line (point2 x 0) (Vector2 0 1)
 horizontalLine   :: Num r => r -> Line 2 r
 horizontalLine y = Line (point2 0 y) (Vector2 1 0)
 
--- | Given a line l with anchor point p, get the line perpendicular to l that also goes through p.
+-- | Given a line \(l\) with anchor point \(p\) and direction \(v\), get the
+-- line \(m\) perpendicular to \(l\) that also goes through \(p\) and such that
+-- \(v\) points into the right halfplane defined by \(m\).
+--
+-- >>> perpendicularTo $ Line origin (Vector2 10 5)
+-- Line (Point2 [0,0]) (Vector2 [-5,10])
 perpendicularTo                           :: Num r => Line 2 r -> Line 2 r
 perpendicularTo (Line p ~(Vector2 vx vy)) = Line p (Vector2 (-vy) vx)
-
-
 
 
 
