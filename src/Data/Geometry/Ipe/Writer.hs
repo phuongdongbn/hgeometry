@@ -147,7 +147,7 @@ mn `mAddAtts` ats = fmap (`addAtts` ats) mn
 --------------------------------------------------------------------------------
 
 instance IpeWriteText Double where
-  ipeWriteText = writeByShow
+  ipeWriteText = ipeWriteText . realToFrac @Double @Pico
 
 instance IpeWriteText Int where
   ipeWriteText = writeByShow
